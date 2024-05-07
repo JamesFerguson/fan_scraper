@@ -80,9 +80,11 @@ puts "Starting..."
 browser = Watir::Browser.new(:firefox)
 browser.goto(INDEX_PAGE)
 
+Watir::Wait.until {
+  browser.element(css: '.next-button').visible? &&
+  browser.elements(css: '.product-card a').length > 1
+}
 
-# Wait until the elements are present on the page before proceeding
-browser.wait_until { |b| b.divs(class: 'li-product__list-item') }
 puts "Closing modal (if any)..."
 browser.wait_until(timeout: 10) { |b| b.element(css: SCRAPE_SPECS[:close_button]) }
 if browser.element(css: SCRAPE_SPECS[:close_button]).exists?
