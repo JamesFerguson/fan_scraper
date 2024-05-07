@@ -126,7 +126,7 @@ while(true) do
   end
 end
 
-extract_to_csv(browser, anchor_nodes)
+extract_to_csv(browser, all_product_links.flatten.uniq)
 
 puts "Done!"
 # browser.close
