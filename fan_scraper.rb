@@ -4,7 +4,7 @@ require 'csv'
 INDEX_PAGE = 'https://www.ceilingfansdirect.com.au/category/exhaust-fans-170'.freeze
 CSV_PATH = "tmp/fans_#{Time.now.strftime("%Y%m%d_%H%M%S")}.csv".freeze
 
-SCRAPE_SPECS = {
+CSS_SELECTORS = {
   name: 'h1',
   price: '.single-product-summary__total-price',
   specifications_table_row_header: '.single-product-specs__row-header',
@@ -16,8 +16,8 @@ SCRAPE_SPECS = {
 def extract_fields(browser, url, csv_writer)
   browser.goto(url)
 
-  name = browser.element(css: SCRAPE_SPECS[:name]).text || 'N/A' rescue 'N/A'
-  price = browser.element(css: SCRAPE_SPECS[:price]).text.gsub(/[^\d.]/, '').to_f.round.to_s || 'N/A' rescue 'N/A'
+  name = browser.element(css: CSS_SELECTORS[:name]).text || 'N/A' rescue 'N/A'
+  price = browser.element(css: CSS_SELECTORS[:price]).text.gsub(/[^\d.]/, '').to_f.round.to_s || 'N/A' rescue 'N/A'
 
   # Extract decibel_level as a numeric value from the table cell matching the table header "Air Extraction (m3/hr)"
   air_rate_headers = ['Air Extraction (m3/hr)', 'Air Extraction Rate', 'Air Extraction', 'Air Extraction (m³/h)', 'Air Extraction (m³H)', 'Air Extraction (m3H)', 'Air Extraction (m3/h)', 'Air Extraction (m³/hr)']
@@ -41,7 +41,7 @@ end
 
 # Submethod to find the index of the specified table header from a list of possible headers
 def find_table_header_index(browser, header_candidates)
-  headers = browser.elements(css: SCRAPE_SPECS[:specifications_table_row_header]).map(&:innertext)
+  headers = browser.elements(css: CSS_SELECTORS[:specifications_table_row_header]).map(&:innertext)
 
   header_candidates.each do |header_text|
     header_index = headers.index(header_text)
@@ -54,7 +54,7 @@ end
 
 # Submethod to extract the numeric value from a table cell
 def extract_numeric_value_from_cell(browser, cell_index)
-  numeric_value = browser.elements(css: SCRAPE_SPECS[:specifications_table_row_value])[cell_index].innertext
+  numeric_value = browser.elements(css: CSS_SELECTORS[:specifications_table_row_value])[cell_index].innertext
   numeric_value = numeric_value[/\d+(\.\d+)?/] || 'N/A'
   numeric_value.to_f.round.to_s unless numeric_value == 'N/A'
 end
@@ -86,9 +86,9 @@ Watir::Wait.until {
 }
 
 puts "Closing modal (if any)..."
-browser.wait_until(timeout: 10) { |b| b.element(css: SCRAPE_SPECS[:close_button]) }
-if browser.element(css: SCRAPE_SPECS[:close_button]).exists?
-  browser.element(css: SCRAPE_SPECS[:close_button]).click
+browser.wait_until(timeout: 10) { |b| b.element(css: CSS_SELECTORS[:close_button]) }
+if browser.element(css: CSS_SELECTORS[:close_button]).exists?
+  browser.element(css: CSS_SELECTORS[:close_button]).click
 end
 
 all_product_links = []
@@ -99,7 +99,7 @@ while(true) do
   browser.wait_until(timeout: 100) { |b| b.elements(css: '.product-card > a') }
 
   puts "Getting nodes..."
-  product_links = browser.elements(css: SCRAPE_SPECS[:product_links]).map { |anchor| anchor.attribute_value('href') }
+  product_links = browser.elements(css: CSS_SELECTORS[:product_links]).map { |anchor| anchor.attribute_value('href') }
   break if product_links.empty?
   all_product_links << product_links
   pp urls
