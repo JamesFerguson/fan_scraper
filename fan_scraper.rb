@@ -92,7 +92,8 @@ module FanScraper
     end
 
     def write(&block)
-      CSV.open(path, 'ab') do |csv|
+      # 'at' => write only, append mode, create file if not exists, text / utf-8 format with line ending handling
+      CSV.open(path, 'at') do |csv|
         begin
           csv << headers
 
