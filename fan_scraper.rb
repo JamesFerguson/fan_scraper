@@ -2,8 +2,6 @@ require 'watir'
 require 'csv'
 
 INDEX_PAGE = 'https://www.ceilingfansdirect.com.au/category/exhaust-fans-170'.freeze
-CSV_PATH = "tmp/fans_#{Time.now.strftime("%Y%m%d_%H%M%S")}.csv".freeze
-
 CSS_SELECTORS = {
   close_button: 'button.close',
   name: 'h1',
@@ -13,6 +11,9 @@ CSS_SELECTORS = {
   specifications_table_row_header: '.single-product-specs__row-header',
   specifications_table_row_value: '.single-product-specs__row-value',
 }
+
+CSV_PATH = "tmp/fans_#{Time.now.strftime("%Y%m%d_%H%M%S")}.csv".freeze
+CSV_HEADERS = ['Name', 'Price ($)', 'Air Extraction Rate (m3h)', 'Decibel Level (dBA)', 'URL']
 
 module FanScraper
   class Browser
@@ -82,11 +83,24 @@ module FanScraper
     end
   end
 
-  class CSV
-    attr_reader :path
+  class OuputFile
+    attr_reader :headers, :path
 
-    def initialize(path)
+    def initialize(path, headers)
       @path = path
+      @headers = headers
+    end
+
+    def write(&block)
+      CSV.open(path, 'ab') do |csv|
+        begin
+          csv << headers
+
+          block.call(csv)
+        ensure
+          csv.close if csv
+        end
+      end
     end
   end
 end
@@ -94,7 +108,7 @@ end
 
 
 
-def extract_fields(browser, url, csv_writer)
+def extract_fields(browser, url)
   browser.goto(url)
 
   name = browser.element(css: CSS_SELECTORS[:name]).text || 'N/A' rescue 'N/A'
@@ -117,7 +131,7 @@ def extract_fields(browser, url, csv_writer)
   puts "URL: #{url}"
   puts '----------------------'
 
-  csv_writer << [name, price, air_extraction_rate, decibel_level, url]
+  [name, price, air_extraction_rate, decibel_level, url]
 end
 
 # Submethod to find the index of the specified table header from a list of possible headers
@@ -140,16 +154,16 @@ def extract_numeric_value_from_cell(browser, cell_index)
   numeric_value.to_f.round.to_s unless numeric_value == 'N/A'
 end
 
-def extract_to_csv(browser, anchor_nodes)
+def extract_to_csv(browser, urls)
+
   # Create and open the CSV file for writing
   CSV.open(CSV_PATH, 'ab') do |csv|
     begin
       # Write the CSV header row
       csv << ['Name', 'Price ($)', 'Air Extraction Rate (m3h)', 'Decibel Level (dBA)', 'URL']
 
-      anchor_nodes.each do |anchor|
-        url = anchor
-        extract_fields(browser, url, csv)
+      urls.each do |url|
+        csv << extract_fields(browser, url)
       end
     ensure
       csv.close if csv
@@ -186,7 +200,14 @@ while(true) do
   fs_browser.wait_until_new_page_is_loaded(CSS_SELECTORS[:product_links])
 end
 
-extract_to_csv(browser, all_product_links.flatten.uniq)
+# extract_to_csv(fs_browser.browser, all_product_links.flatten.uniq)
+urls = all_product_links.flatten.uniq
+out = FanScraper::OuputFile.new(CSV_PATH, CSV_HEADERS)
+out.write do |csv|
+  urls.each do |url|
+    csv << extract_fields(fs_browser.browser, url)
+  end
+end
 
 puts "Done!"
 fs_browser.close
