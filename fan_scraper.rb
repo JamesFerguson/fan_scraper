@@ -113,8 +113,8 @@ def extract_to_csv(browser, anchor_nodes)
 end
 
 puts "Starting..."
-browser = Watir::Browser.new(:firefox)
-browser.goto(INDEX_PAGE)
+fs_browser = FanScraper::Browser.new(INDEX_PAGE)
+browser = fs_browser.browser
 
 Watir::Wait.until {
   browser.element(css: '.next-button').visible? &&
@@ -122,7 +122,7 @@ Watir::Wait.until {
 }
 
 puts "Closing modal (if any)..."
-browser.wait_until(timeout: 10) { |b| b.element(css: CSS_SELECTORS[:close_button]) }
+fs_browser.wait_for_element(CSS_SELECTORS[:close_button], 10)
 if browser.element(css: CSS_SELECTORS[:close_button]).exists?
   browser.element(css: CSS_SELECTORS[:close_button]).click
 end
@@ -131,10 +131,9 @@ all_product_links = []
 urls = []
 while(true) do
   urls << browser.url
-  # Wait until the products are present on the page before proceeding
-  browser.wait_until(timeout: 100) { |b| b.elements(css: '.product-card > a') }
 
   puts "Getting nodes..."
+  fs_browser.wait_for_elements(CSS_SELECTORS[:product_links], 10)
   product_links = browser.elements(css: CSS_SELECTORS[:product_links]).map { |anchor| anchor.attribute_value('href') }
   break if product_links.empty?
   all_product_links << product_links
@@ -142,7 +141,7 @@ while(true) do
   pp product_links
 
   begin
-    browser.wait_until(timeout: 6) { |b| b.element(css: '.next-button').exists? }
+    fs_browser.wait_for_element('.next-button', 10)
     next_button = browser.element(css: '.next-button')
 
     puts "next_button found: #{next_button.exists?}"
