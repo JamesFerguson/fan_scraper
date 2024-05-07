@@ -59,19 +59,6 @@ def extract_numeric_value_from_cell(browser, cell_index)
   numeric_value.to_f.round.to_s unless numeric_value == 'N/A'
 end
 
-# Function to load additional items on the page
-def load_more_items(browser)
-  browser.wait_until(timeout: 6) { |b| b.div(css: '.li-button[data-testid]').exists? }
-  d = browser.div(css: '.li-button[data-testid]')
-  puts "d found: #{d.exists?}"
-  d.click
-  true
-rescue Watir::Wait::TimeoutError, Watir::Exception::UnknownObjectException
-  # If the element is not found or the wait times out, we assume there are no more items to load.
-  puts 'No more items to load.'
-  false
-end
-
 def extract_to_csv(browser, anchor_nodes)
   # Create and open the CSV file for writing
   CSV.open(CSV_PATH, 'ab') do |csv|
