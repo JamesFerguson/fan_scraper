@@ -78,7 +78,7 @@ end
 
 puts "Starting..."
 browser = Watir::Browser.new(:firefox)
-browser.goto('https://www.ceilingfansdirect.com.au/c/exhaust-fans-170')
+browser.goto(INDEX_PAGE)
 
 # Get all the anchor nodes within div.li-product__list-item
 puts "Closing modal..."
