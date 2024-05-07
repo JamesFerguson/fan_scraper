@@ -1,11 +1,23 @@
 require 'watir'
 require 'csv'
 
+INDEX_PAGE = 'https://www.ceilingfansdirect.com.au/category/exhaust-fans-170'.freeze
+CSV_PATH = "tmp/fans_#{Time.now.strftime("%Y%m%d_%H%M%S")}.csv".freeze
+
+SCRAPE_SPECS = {
+  name: 'h1',
+  price: '.single-product-summary__total-price',
+  specifications_table_row_header: '.single-product-specs__row-header',
+  specifications_table_row_value: '.single-product-specs__row-value',
+  close_button: 'button.close',
+  product_links: '.product-card > a',
+}
+
 def extract_fields(browser, url, csv_writer)
   browser.goto(url)
 
-  name = browser.element(css: 'h1').text || 'N/A' rescue 'N/A'
-  price = browser.element(css: '.li-product-banner__price').text.gsub(/[^\d.]/, '').to_f.round.to_s || 'N/A' rescue 'N/A'
+  name = browser.element(css: SCRAPE_SPECS[:name]).text || 'N/A' rescue 'N/A'
+  price = browser.element(css: SCRAPE_SPECS[:price]).text.gsub(/[^\d.]/, '').to_f.round.to_s || 'N/A' rescue 'N/A'
 
   # Extract decibel_level as a numeric value from the table cell matching the table header "Air Extraction (m3/hr)"
   air_rate_headers = ['Air Extraction (m3/hr)', 'Air Extraction Rate', 'Air Extraction', 'Air Extraction (m³/h)', 'Air Extraction (m³H)', 'Air Extraction (m3H)', 'Air Extraction (m3/h)', 'Air Extraction (m³/hr)']
@@ -29,7 +41,7 @@ end
 
 # Submethod to find the index of the specified table header from a list of possible headers
 def find_table_header_index(browser, header_candidates)
-  headers = browser.elements(css: 'table.li-tab__table th').map(&:innertext)
+  headers = browser.elements(css: SCRAPE_SPECS[:specifications_table_row_header]).map(&:innertext)
 
   header_candidates.each do |header_text|
     header_index = headers.index(header_text)
@@ -42,7 +54,7 @@ end
 
 # Submethod to extract the numeric value from a table cell
 def extract_numeric_value_from_cell(browser, cell_index)
-  numeric_value = browser.elements(css: "table.li-tab__table td")[cell_index].innertext
+  numeric_value = browser.elements(css: SCRAPE_SPECS[:specifications_table_row_value])[cell_index].innertext
   numeric_value = numeric_value[/\d+(\.\d+)?/] || 'N/A'
   numeric_value.to_f.round.to_s unless numeric_value == 'N/A'
 end
@@ -62,7 +74,7 @@ end
 
 def extract_to_csv(browser, anchor_nodes)
   # Create and open the CSV file for writing
-  CSV.open("fans_#{Time.now.strftime("%Y%m%d_%H%M%S")}.csv", 'wb') do |csv|
+  CSV.open(CSV_PATH, 'ab') do |csv|
     begin
       # Write the CSV header row
       csv << ['Name', 'Price ($)', 'Air Extraction Rate (m3h)', 'Decibel Level (dBA)', 'URL']
