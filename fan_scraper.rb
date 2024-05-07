@@ -14,6 +14,41 @@ CSS_SELECTORS = {
   specifications_table_row_value: '.single-product-specs__row-value',
 }
 
+module FanScraper
+  class Browser
+    attr_reader :browser
+
+    def initialize(start_page)
+      @browser = Watir::Browser.new(:firefox)
+      browser.goto(start_page)
+    end
+
+    def find_text_from_selector(selector)
+      find_element_from_selector(selector).text
+    end
+
+    def find_element_from_selector(selector)
+      browser.element(css: selector)
+    end
+
+    def wait_for_element(selector, timeout)
+      browser.wait(timeout) { |b| b.element(css: selector) }
+    end
+
+    def wait_for_element(selector, timeout)
+      browser.wait(timeout) { |b| b.elements(css: selector) }
+    end
+  end
+
+  class CSV
+    attr_reader :path
+
+    def initialize(path)
+      @path = path
+    end
+  end
+end
+
 def extract_fields(browser, url, csv_writer)
   browser.goto(url)
 
