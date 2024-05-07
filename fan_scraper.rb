@@ -91,9 +91,40 @@ if browser.element(css: SCRAPE_SPECS[:close_button]).exists?
   browser.element(css: SCRAPE_SPECS[:close_button]).click
 end
 
-puts "Getting nodes..."
-anchor_nodes = browser.divs(class: 'li-product__list-item').map { |div| div.link.attribute_value('href') }
-pp anchor_nodes
+all_product_links = []
+urls = []
+while(true) do
+  urls << browser.url
+  # Wait until the products are present on the page before proceeding
+  browser.wait_until(timeout: 100) { |b| b.elements(css: '.product-card > a') }
+
+  puts "Getting nodes..."
+  product_links = browser.elements(css: SCRAPE_SPECS[:product_links]).map { |anchor| anchor.attribute_value('href') }
+  break if product_links.empty?
+  all_product_links << product_links
+  pp urls
+  pp product_links
+
+  begin
+    browser.wait_until(timeout: 6) { |b| b.element(css: '.next-button').exists? }
+    d = browser.element(css: '.next-button')
+
+    puts "d found: #{d.exists?}"
+    d.click
+
+    old_first_product = browser.elements(css: '.product-card > a')[0]
+    Watir::Wait.until {
+      browser.element(css: '.next-button').visible? && 
+      browser.elements(css: '.product-card > a')[0] != old_first_product
+    }
+
+    true
+  rescue Watir::Wait::TimeoutError, Watir::Exception::UnknownObjectException, Selenium::WebDriver::Error::ElementClickInterceptedError
+    # If the element is not found or the wait times out, we assume there are no more pages.
+    puts 'No more pages to load.'
+    break
+  end
+end
 
 extract_to_csv(browser, anchor_nodes)
 
