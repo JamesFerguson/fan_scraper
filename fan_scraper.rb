@@ -16,7 +16,13 @@ CSS_SELECTORS = {
 
 module FanScraper
   class Browser
+    extend Forwardable
+
     attr_reader :browser
+
+    def_delegators :browser,
+                   :close,
+                   :url
 
     def initialize(start_page)
       @browser = Watir::Browser.new(:firefox)
@@ -29,6 +35,12 @@ module FanScraper
 
     def find_element_from_selector(selector)
       browser.element(css: selector)
+    end
+
+    def map_elements_attributes(selector, attribute)
+      browser.
+        elements(css: selector).
+        map { |e| e.attribute_value(attribute) }
     end
 
     def click_button(selector, timeout)
@@ -59,6 +71,13 @@ module FanScraper
     def wait_for_some_elements(selector, count)
       Watir::Wait.until do
         browser.elements(css: selector).length > count
+      end
+    end
+
+    def wait_until_new_page_is_loaded(test_selector)
+      old_first_element = browser.elements(css: test_selector)[0]
+      Watir::Wait.until do
+        browser.elements(css: test_selector)[0] != old_first_element
       end
     end
   end
@@ -140,7 +159,6 @@ end
 
 puts "Starting..."
 fs_browser = FanScraper::Browser.new(INDEX_PAGE)
-browser = fs_browser.browser
 
 fs_browser.wait_for_some_elements(CSS_SELECTORS[:product_links], 1)
 
@@ -150,11 +168,11 @@ fs_browser.click_button(CSS_SELECTORS[:close_button], 10)
 all_product_links = []
 urls = []
 while(true) do
-  urls << browser.url
+  urls << fs_browser.url
 
   puts "Getting nodes..."
   fs_browser.wait_for_elements(CSS_SELECTORS[:product_links], 10)
-  product_links = browser.elements(css: CSS_SELECTORS[:product_links]).map { |anchor| anchor.attribute_value('href') }
+  product_links = fs_browser.map_elements_attributes(CSS_SELECTORS[:product_links], 'href')
   break if product_links.empty?
   all_product_links << product_links
   pp urls
@@ -165,14 +183,11 @@ while(true) do
     break
   end
 
-  old_first_product = browser.elements(css: '.product-card > a')[0]
-  Watir::Wait.until {
-    browser.elements(css: '.product-card > a')[0] != old_first_product
-  }
+  fs_browser.wait_until_new_page_is_loaded(CSS_SELECTORS[:product_links])
 end
 
 extract_to_csv(browser, all_product_links.flatten.uniq)
 
 puts "Done!"
-browser.close
+fs_browser.close
 
