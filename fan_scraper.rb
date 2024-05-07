@@ -107,10 +107,10 @@ while(true) do
 
   begin
     browser.wait_until(timeout: 6) { |b| b.element(css: '.next-button').exists? }
-    d = browser.element(css: '.next-button')
+    next_button = browser.element(css: '.next-button')
 
-    puts "d found: #{d.exists?}"
-    d.click
+    puts "next_button found: #{next_button.exists?}"
+    next_button.click
 
     old_first_product = browser.elements(css: '.product-card > a')[0]
     Watir::Wait.until {
@@ -130,3 +130,4 @@ extract_to_csv(browser, all_product_links.flatten.uniq)
 
 puts "Done!"
 # browser.close
+
