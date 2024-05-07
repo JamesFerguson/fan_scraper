@@ -80,16 +80,14 @@ puts "Starting..."
 browser = Watir::Browser.new(:firefox)
 browser.goto(INDEX_PAGE)
 
-# Get all the anchor nodes within div.li-product__list-item
-puts "Closing modal..."
-browser.wait_until(timeout: 10) { |b| b.button(class: 'close') }
-browser.button(class: 'close').click
-
-puts "Loading additional items..."
-while load_more_items(browser); end
 
 # Wait until the elements are present on the page before proceeding
 browser.wait_until { |b| b.divs(class: 'li-product__list-item') }
+puts "Closing modal (if any)..."
+browser.wait_until(timeout: 10) { |b| b.element(css: SCRAPE_SPECS[:close_button]) }
+if browser.element(css: SCRAPE_SPECS[:close_button]).exists?
+  browser.element(css: SCRAPE_SPECS[:close_button]).click
+end
 
 puts "Getting nodes..."
 anchor_nodes = browser.divs(class: 'li-product__list-item').map { |div| div.link.attribute_value('href') }
