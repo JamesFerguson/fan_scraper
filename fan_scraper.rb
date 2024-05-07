@@ -31,12 +31,35 @@ module FanScraper
       browser.element(css: selector)
     end
 
-    def wait_for_element(selector, timeout)
-      browser.wait(timeout) { |b| b.element(css: selector) }
+    def click_button(selector, timeout)
+      begin
+        element = wait_for_element(selector, timeout)
+        if element.exists?
+          element.click
+          true
+        else
+          false
+        end    
+      rescue Watir::Wait::TimeoutError, Watir::Exception::UnknownObjectException, Selenium::WebDriver::Error::ElementClickInterceptedError
+        # If the element is not found or the wait times out, return false
+        false
+      end    
     end
 
     def wait_for_element(selector, timeout)
+      browser.wait(timeout) { |b| b.element(css: selector) }
+      browser.element(css: selector)
+    end
+
+    def wait_for_elements(selector, timeout)
       browser.wait(timeout) { |b| b.elements(css: selector) }
+      browser.elements(css: selector)
+    end
+
+    def wait_for_some_elements(selector, count)
+      Watir::Wait.until do
+        browser.elements(css: selector).length > count
+      end
     end
   end
 
@@ -48,6 +71,9 @@ module FanScraper
     end
   end
 end
+
+
+
 
 def extract_fields(browser, url, csv_writer)
   browser.goto(url)
@@ -116,16 +142,10 @@ puts "Starting..."
 fs_browser = FanScraper::Browser.new(INDEX_PAGE)
 browser = fs_browser.browser
 
-Watir::Wait.until {
-  browser.element(css: '.next-button').visible? &&
-  browser.elements(css: '.product-card a').length > 1
-}
+fs_browser.wait_for_some_elements(CSS_SELECTORS[:product_links], 1)
 
 puts "Closing modal (if any)..."
-fs_browser.wait_for_element(CSS_SELECTORS[:close_button], 10)
-if browser.element(css: CSS_SELECTORS[:close_button]).exists?
-  browser.element(css: CSS_SELECTORS[:close_button]).click
-end
+fs_browser.click_button(CSS_SELECTORS[:close_button], 10)
 
 all_product_links = []
 urls = []
@@ -140,29 +160,19 @@ while(true) do
   pp urls
   pp product_links
 
-  begin
-    fs_browser.wait_for_element('.next-button', 10)
-    next_button = browser.element(css: '.next-button')
-
-    puts "next_button found: #{next_button.exists?}"
-    next_button.click
-
-    old_first_product = browser.elements(css: '.product-card > a')[0]
-    Watir::Wait.until {
-      browser.element(css: '.next-button').visible? && 
-      browser.elements(css: '.product-card > a')[0] != old_first_product
-    }
-
-    true
-  rescue Watir::Wait::TimeoutError, Watir::Exception::UnknownObjectException, Selenium::WebDriver::Error::ElementClickInterceptedError
-    # If the element is not found or the wait times out, we assume there are no more pages.
+  unless fs_browser.click_button('.next-button', 10)
     puts 'No more pages to load.'
     break
   end
+
+  old_first_product = browser.elements(css: '.product-card > a')[0]
+  Watir::Wait.until {
+    browser.elements(css: '.product-card > a')[0] != old_first_product
+  }
 end
 
 extract_to_csv(browser, all_product_links.flatten.uniq)
 
 puts "Done!"
-# browser.close
+browser.close
 
