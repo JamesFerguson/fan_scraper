@@ -5,12 +5,13 @@ INDEX_PAGE = 'https://www.ceilingfansdirect.com.au/category/exhaust-fans-170'.fr
 CSV_PATH = "tmp/fans_#{Time.now.strftime("%Y%m%d_%H%M%S")}.csv".freeze
 
 CSS_SELECTORS = {
+  close_button: 'button.close',
   name: 'h1',
+  next_button: '.next-button',
   price: '.single-product-summary__total-price',
+  product_links: '.product-card > a',
   specifications_table_row_header: '.single-product-specs__row-header',
   specifications_table_row_value: '.single-product-specs__row-value',
-  close_button: 'button.close',
-  product_links: '.product-card > a',
 }
 
 def extract_fields(browser, url, csv_writer)
